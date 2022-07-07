@@ -1,0 +1,335 @@
+// #include "SingleCell/NeonatalRatAtria.cc"
+// #include "SingleCell/RatSAN.cc"
+#include "SingleCell/HumanVentricle_healthy_CO.cpp"
+// #include "SingleCell/TPORd.cc"
+// #include "SingleCell/ORd.cc"
+#include <stdio.h>
+#include <math.h>
+#include <stdlib.h>
+#include <iostream>
+#include <fstream>
+#include <string.h>
+#include "omp.h"
+
+using namespace std;
+
+// ONLY ONE LINE CAN BE KEPT HERE
+// #define SAN
+// #define ATRIA
+#define VENT
+// #define HETEROGENEITY 
+
+
+int main(int argc, char *argv[])
+{
+	// --------user configuration list--------
+	// All you need to do is put your single cell model into SingleCell folder
+	// and modify following user-dependent parameters.
+	
+	// 1D parameters for all cell types
+	double dx = 0.15; // mm
+	double dt = 0.02; // ms
+	int sanCellNum = 0;
+	int atrialCellNum = 0;
+	int epiCellNum = 0;
+	int mCellNum = 0;
+	int endoCellNum = 0;
+	#if defined(SAN) || defined(HETEROGENEITY)
+	sanCellNum = 50; // cell numbers in OneD strand
+	#endif
+	#if defined(ATRIA) || defined(HETEROGENEITY) 
+	atrialCellNum = 50;
+	#endif
+	#if defined(VENT)	
+	endoCellNum = 25;
+	mCellNum = 35;
+	epiCellNum = 40;
+	#endif
+	// following parameters are for 1D or 2D.3D
+	double atrialCoeff = 1.0*0.0195; // coefficient parameter in OneD strand, but needed to be validated by fitting CV.
+	double sanCoeff = 0.1*0.0195; // coefficient parameter in OneD strand, but needed to be validated by fitting CV.
+	double ventCoeff = 0.1275; // 0.0106      0.154 for TP06
+
+
+	// for atria
+	#ifdef ATRIA
+	int numS1 = 5;
+	double BCL = 1000; // ms
+	double stopTime = numS1*BCL; //ms
+	double stimStrength = -10.0;//8.78; //8.78;//-8.78; // pA
+	double stimDuration = 5.0;	// ms
+	double stimStart = 0.0; // ms  // indicates the time point of beginning stimulus in a cycle
+	#endif
+	
+	// for SAN
+	#ifdef SAN
+	int numS1 = 50; // actually its useless in SAN, just to keep a consistent equations form
+	double BCL = 300; // ms, actually its useless in SAN, just to keep a consistent equations form
+	double stopTime = 2000; //ms
+	double stimStrength = -0.0; // pA
+	double stimDuration = 0.0;	// ms
+	double stimStart = 0.0; // ms  // indicates the time point of beginning stimulus in a cycle
+	#endif
+
+	// for ventricle
+	#ifdef VENT
+	int numS1 = 10;
+	double BCL = 1000; // ms   325(2:1)   250(1:1)  1000(EAD) 500(normal) 750(normal)
+	double stopTime = numS1*BCL + BCL; //ms
+	double stimStrength = -80.0;//8.78; //8.78;//-8.78; // pA
+	double stimDuration = 1.0;	// ms
+	double stimStart = 0.0; // ms  // indicates the time point of beginning stimulus in a cycle
+	#endif
+
+
+	// for heteregeneity 1D strand
+	#ifdef HETEROGENEITY
+	int numS1 = 2; // actually its useless in SAN+Atria, just to keep a consistent equations form
+	double BCL = 1000; // ms, actually its useless in SAN+Atria, just to keep a consistent equations form
+	double stopTime = 1500; //ms
+	double stimStrength = -0.0; // pA
+	double stimDuration = 0.0;	// ms
+	double stimStart = 0.0; // ms  // indicates the time point of beginning stimulus in a cycle
+	#endif
+	
+
+
+
+
+	// --------start simulation--------	
+	// CV calculation stuff
+	double cvStartTime = 0;
+	double cvEndTime = 0;
+	int cvStartFlag = 0; // 0 for not start yet
+	int cvEndFlag = 0;
+	double cv = 0;
+
+	// parallel stuff
+	int coreNum = 8;//omp_get_num_procs();
+	omp_set_num_threads(2 * coreNum);
+
+	// strand initilization, diffusion stuff
+	int cellNum = sanCellNum + atrialCellNum + epiCellNum + mCellNum + endoCellNum; // number of cells in OneD strand
+	typedef CellType* CellPointer;
+	ORdHumanVentricle* strand[cellNum]; // note that constructor contains the initializer
+	double coeff[cellNum]; // diffusion parameters for each cell
+	double dcoeff_dx[cellNum]; // first order derivative for each cell
+	double oldV[cellNum];
+
+	// assign coeff according to cell type
+	for(int i = 0; i < cellNum; i++)
+	{
+		#ifdef VENT // set coeff to 'ventCoeff' whatever it was if VENT defined.
+		if(i == 59)
+			coeff[i] = 0.2*ventCoeff;
+		else
+			coeff[i] = ventCoeff;
+		#endif
+	}
+
+
+	// Calculate the dcoeff/dx(i.e. dcoeff_dx in the code) in the 1D strand
+	for(int i = 0; i < cellNum; i++)
+	{
+		if (i == 0) 
+			dcoeff_dx[i] = (coeff[i+1] - coeff[i])/dx;
+		else if (i == cellNum-1) 
+			dcoeff_dx[i] = (coeff[i] - coeff[i-1])/dx;
+		else
+			dcoeff_dx[i] = (coeff[i+1] - coeff[i-1])/(2.0*dx);
+	}
+
+
+
+
+	#pragma omp parallel for schedule(static)
+	for (int i = 0; i < cellNum; i++)
+	{
+		# ifdef HETEROGENEITY
+		if(i < sanCellNum)
+		{
+			strand[i] = new RatSAN();
+			// read in initial values (this is because the original init values is not stable yet)
+			// if the initfile is not available, run the initialization.cc first
+			// FILE *initfile = fopen("SingleCell/RatSANAtriaInitialValues.dat","r");
+			// strand[i]->readinAllStates(initfile);
+			// fclose(initfile);
+		}	
+		else
+		{
+			strand[i] = new NeonatalRatAtria();
+			// read in initial values (this is because the original init values is not stable yet)
+			// if the initfile is not available, run the initialization.cc first
+			FILE *initfile = fopen("SingleCell/NeonatalRatAtriaInitialValues.dat","r");
+			strand[i]->readinAllStates(initfile); 
+			fclose(initfile);
+		}
+		#endif
+
+
+
+		#ifdef VENT
+		FILE *initfile;
+		if(i >= 0 && i < endoCellNum)
+		{
+			strand[i] = new ORdHumanVentricle(ENDO);
+			// read in initial values (this is because the original init values is not stable yet)
+			// if the initfile is not available, run the initialization.cc first
+			initfile = fopen("SingleCell/TP06InitialValues_ENDO.dat","r");
+			// strand[i]->readinAllStates(initfile);   // must be uncommented to get 0.719 m/s
+			fclose(initfile);
+		}
+		else if (i < endoCellNum + mCellNum)
+		{
+			strand[i] = new ORdHumanVentricle(M);
+			// read in initial values (this is because the original init values is not stable yet)
+			// if the initfile is not available, run the initialization.cc first
+			initfile = fopen("SingleCell/TP06InitialValues_MCELL.dat","r");
+			// strand[i]->readinAllStates(initfile);   // must be uncommented to get 0.719 m/s
+			fclose(initfile);
+		}
+		else // i < total cellnum
+		{
+			strand[i] = new ORdHumanVentricle(EPI);
+			// read in initial values (this is because the original init values is not stable yet)
+			// if the initfile is not available, run the initialization.cc first
+			initfile = fopen("SingleCell/TP06InitialValues_EPI.dat","r");
+			// strand[i]->readinAllStates(initfile);   // must be uncommented to get 0.719 m/s
+			fclose(initfile);
+		}	
+		#endif
+
+
+		// apply user configuration about dt
+		strand[i]->setDt(dt);
+	}
+
+	#ifdef ATRIA
+	FILE *datafile = fopen("Outputs/AtriaOneDResults.dat","w+");
+	#endif
+
+	#ifdef SAN
+	FILE *datafile = fopen("Outputs/SANOneDResults.dat","w+");
+	#endif
+	
+	#ifdef VENT
+	FILE *datafile = fopen("Outputs/VentOneDResults.dat","w+");
+	#endif
+
+	#ifdef HETEROGENEITY
+	FILE *datafile = fopen("Outputs/HeterOneDResults.dat","w+");
+	#endif
+
+	double time = 0;
+	int step = 0;
+	for(time = 0.0, step = 0; time <= stopTime; time += dt, step++)
+	{
+		if(step%25000 == 0) // 25000 * dt ms = 0.125s 
+			cout << "Progress = " << 100.0*time/stopTime << "\%." << endl;
+
+		for(int i = 0; i < cellNum; i++)
+		{
+			oldV[i] = strand[i]->getV();
+		}
+
+		for(int i = 0; i < cellNum; i++)
+		{
+			// ---stimulation applying or not, based on the time and cell location---
+			// initialize all stim to 0.0
+			strand[i]->setIstim(0.0);
+			// Apply stimulus according to user configuration (about time)
+			if(time - floor(time/BCL)*BCL >= stimStart && 
+		   	   time - floor(time/BCL)*BCL < stimStart + stimDuration)
+			{// first 5 cells get S1 stimulation
+		    	if(i < 3 && i >= 0)
+				{// cells get stimulation in certain duration
+					// as strand[i] is a pointer, A->B should be used instead of A.B
+					// ref. http://blog.csdn.net/qq457163027/article/details/54237782
+					// cout << "here" << endl;
+					strand[i]->setIstim(stimStrength);
+				}
+			}
+
+			// ---------calculate diffusion, i.e. dVgap---------
+		
+			double dVgap_dt = 0;
+			double first_order;
+			double second_order;
+
+			// Step 1: calculate first and second order of membrane potential
+			if(i == 0) 
+			{
+				// use strand[0] instead of "strand[-1]"
+				first_order = (oldV[i+1] - oldV[i])/(1.0*dx);
+				second_order = (oldV[i+1] + oldV[i] - 2.0*oldV[i])/(dx*dx);
+			}
+			else if(i > 0 && i < cellNum - 1) 
+			{
+				// normal case
+				first_order = (oldV[i+1] - oldV[i-1])/(2.0*dx);
+				second_order = (oldV[i+1] + oldV[i-1] - 2.0*oldV[i])/(dx*dx);	
+			}
+			else if(i == cellNum - 1)
+			{
+				// use strand[cellNum-1] instead of "strand[cellNum]" as the latter is out of index
+				first_order = (oldV[i] - oldV[i-1])/(1.0*dx);
+				second_order = (oldV[i] + oldV[i-1] - 2.0*oldV[i])/(dx*dx);	
+			}
+
+			// Step 2: calculate dVgap according to equations
+			dVgap_dt = dcoeff_dx[i]*first_order + coeff[i]*second_order;
+
+			//if(step%1000 == 0) cout<<strand[i]->getVgap()<<endl;
+			strand[i]->setDVgap_dt(dVgap_dt);
+				
+			// update
+			strand[i]->update();
+		}// end cell loop
+
+			if(step%10 == 0) // 50*dt = 1 ms once
+			{
+				for(int j = 0; j < cellNum; j++)
+				{
+					// write time before each time step
+					if(j == 0)
+						fprintf(datafile,"%4.10f\t", time);
+					// write volt for each cell
+					fprintf(datafile,"%4.10f\t", strand[j]->getV()); // unit: mV
+					// write enter after each time step
+					if(j == cellNum - 1)
+						fprintf(datafile,"\n");
+				}
+			}// end Membrane Potential recording
+		//}
+
+
+		if (floor(time/BCL) == numS1)
+		{ 
+			// record propagation start and end time for CV calculation
+			if(strand[10]->getV() >= -30 && cvStartFlag == 0)
+			{
+				cvStartTime = time;
+				cout << "start = " << cvStartTime << endl;
+				cvStartFlag = 1;
+			}
+			if(strand[90]->getV() >= -30 && cvEndFlag == 0)
+			{
+				cvEndTime = time;
+				cout << "end = " << cvEndTime << endl;
+				cvEndFlag = 1;
+				cv = (dx * 80) / (cvEndTime - cvStartTime);
+				cout << "duration = " << cvEndTime - cvStartTime << endl;
+			}
+		} // end CV calculation
+
+	}// end of timeloop
+	fclose(datafile);
+
+	if(cvStartFlag == 1 && cvEndFlag == 1)
+		cout << "CV = " << cv << " m/s." << endl;
+	else
+		cout << "Conduction failure!" << endl;
+	printf("All done.\n");
+
+	return 0;
+}
