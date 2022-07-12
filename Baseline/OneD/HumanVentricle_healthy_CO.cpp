@@ -1,19 +1,3 @@
-/*
- * O'Hara's human ventricle single cell model Re-implements in C++.
- * Simulation of the Undiseased Human Cardiac Ventricular Action Potential: Model Formulation and Experimental Validation
- * 
- * Single cell stimulus protocal suggestion: -80pA/pF * 0.5ms 
- * Under Intellectual Property Protection.
- * 
- * 
- * Author      : Thomas O'Hara et al. 
- * Modified by : Shugang Zhang <zhangshugang@hotmail.com>
- * Date        : 24-10-2018
- * Last update : 25-10-2018
- */
-
-// where is Cm??
-
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
