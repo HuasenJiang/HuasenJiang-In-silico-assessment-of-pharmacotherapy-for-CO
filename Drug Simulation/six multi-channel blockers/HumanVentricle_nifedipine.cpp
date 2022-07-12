@@ -186,7 +186,7 @@ class ORdHumanVentricle//:public Cell
 		cai = 1.0e-4;
 		cass = cai;
 //		cansr = 1.2;
-		cansr = 1.2*(1-0.423);//HF
+		cansr = 1.2*(1-0.423);
 		cajsr = cansr;
 
 		// ORd
