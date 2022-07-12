@@ -1,19 +1,3 @@
-/*
- * O'Hara's human ventricle single cell model Re-implements in C++.
- * Simulation of the Undiseased Human Cardiac Ventricular Action Potential: Model Formulation and Experimental Validation
- * 
- * Single cell stimulus protocal suggestion: -80pA/pF * 0.5ms 
- * Under Intellectual Property Protection.
- * 
- * 
- * Author      : Thomas O'Hara et al. 
- * Modified by : Shugang Zhang <zhangshugang@hotmail.com>
- * Date        : 24-10-2018
- * Last update : 25-10-2018
- */
-
-// where is Cm??
-
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
@@ -306,62 +290,6 @@ class ORdHumanVentricle//:public Cell
 		double vffrt=v*F*F/(R*T);
 		double vfrt=v*F/(R*T);
 
-		// -----------------------ORd INa-----------------------
-		/*
-		double mss=1.0/(1.0+exp((-(v+39.57))/9.871));//激活：o'hara,不动
-		//double mss=1.0/(1.0+exp((-(v+47.13))/6.948));//参数换成elies：弃用
-		double tm=1.0/(6.765*exp((v+11.64)/34.77)+8.552*exp(-(v+77.42)/5.955));
-		m=mss-(mss-m)*exp(-dt/tm);
-
-		#if defined (Baseline) || defined(HF)
-		double hss=1.0/(1+exp((v+82.90)/6.086));//oh
-		#endif
-
-		#ifdef CON
-		double hss=1.0/(1+exp((v+78.67)/6.030));//control(elies)
-		#endif
-
-		#if defined (CORM) || defined(HF_CORM)
-		double hss=1.0/(1+exp((v+84.97)/7.621));//elies_CORM-2
-		#endif
-
-		double thf=1.0/(1.432e-5*exp(-(v+1.196)/6.285)+6.149*exp((v+0.5096)/20.27));
-		double ths=1.0/(0.009794*exp(-(v+17.95)/28.05)+0.3343*exp((v+5.730)/56.66));
-		double Ahf=0.99;
-		double Ahs=1.0-Ahf;
-		hf=hss-(hss-hf)*exp(-dt/thf);
-		hs=hss-(hss-hs)*exp(-dt/ths);
-		double h=Ahf*hf+Ahs*hs;
-		double jss=hss;
-		double tj=2.038+1.0/(0.02136*exp(-(v+100.6)/8.281)+0.3052*exp((v+0.9941)/38.45));
-		j=jss-(jss-j)*exp(-dt/tj);
-		double hssp=1.0/(1+exp((v+89.1)/6.086));
-		double thsp=3.0*ths;
-		hsp=hssp-(hssp-hsp)*exp(-dt/thsp);
-		double hp=Ahf*hf+Ahs*hsp;
-		double tjp=1.46*tj;
-		jp=jss-(jss-jp)*exp(-dt/tjp);
-		double GNa=75;//原oh
-		double fINap=(1.0/(1.0+KmCaMK/CaMKa));
-
-
-		#if defined (Baseline) || defined(CON)
-		INa=GNa*(v-ENa)*m*m*m*((1.0-fINap)*h*j+fINap*hp*jp);
-		#endif
-
-		#ifdef CORM
-		INa=GNa*(v-ENa)*m*m*m*((1.0-fINap)*h*j+fINap*hp*jp)*0.47;
-		#endif
-
-		#ifdef HF
-		INa=GNa*(v-ENa)*m*m*m*((1.0-fINap)*h*j+fINap*hp*jp)*(1-0.741);
-		#endif
-
-		#ifdef HF_CORM
-		INa=GNa*(v-ENa)*m*m*m*((1.0-fINap)*h*j+fINap*hp*jp)*(1-0.741)*0.47;
-		#endif
-		*/
-
 		// ----------------TP06 INa----------------------
 		
 		double AM, BM, TAU_M, TAU_H, TAU_J, M_INF, H_INF, J_INF, AH_1, BH_1, AH_2, BH_2, AJ_1, AJ_2, BJ_1, BJ_2;
@@ -414,15 +342,11 @@ class ORdHumanVentricle//:public Cell
 		#endif
 
 		#if defined (CORM) || defined (CORM_HW)
-		//INa = GNa*sm*sm*sm*sh*sj*(v-ENa)*RNa;//elies_CORM-2
-		//INa = GNa*sm*sm*sm*sh*sj*(v-ENa);
-		INa = GNa*sm*sm*sm*sh*sj*(v-ENa)*0.47;//
+		INa = GNa*sm*sm*sm*sh*sj*(v-ENa)*0.47;
 		#endif
 
 		#ifdef CORM_Ran
-		//INa = GNa*sm*sm*sm*sh*sj*(v-ENa)*RNa;//elies_CORM-2
-		//INa = GNa*sm*sm*sm*sh*sj*(v-ENa);
-		INa = GNa*sm*sm*sm*sh*sj*(v-ENa)*0.47*RnaNa;//
+		INa = GNa*sm*sm*sm*sh*sj*(v-ENa)*0.47*RnaNa;
 		#endif
 
 		#ifdef HF
@@ -455,17 +379,15 @@ class ORdHumanVentricle//:public Cell
 		double fINaLp=(1.0/(1.0+KmCaMK/CaMKa));
 
 		#if defined (CON) || defined (Baseline)
-		INaL=GNaL*(v-ENa)*mL*((1.0-fINaLp)*hL+fINaLp*hLp);//control && oh
+		INaL=GNaL*(v-ENa)*mL*((1.0-fINaLp)*hL+fINaLp*hLp);
 		#endif
 
 		#if defined (CORM) || defined (CORM_HW)
-		//INaL=GNaL*(v-ENa)*mL*((1.0-fINaLp)*hL+fINaLp*hLp);
-		INaL=GNaL*(v-ENa)*mL*((1.0-fINaLp)*hL+fINaLp*hLp)*2.05;//CORM-2
+		INaL=GNaL*(v-ENa)*mL*((1.0-fINaLp)*hL+fINaLp*hLp)*2.05;
 		#endif
 
 		#ifdef CORM_Ran
-		//INaL=GNaL*(v-ENa)*mL*((1.0-fINaLp)*hL+fINaLp*hLp);
-		INaL=GNaL*(v-ENa)*mL*((1.0-fINaLp)*hL+fINaLp*hLp)*2.05*RnaNaL;//CORM-2
+		INaL=GNaL*(v-ENa)*mL*((1.0-fINaLp)*hL+fINaLp*hLp)*2.05*RnaNaL;
 		#endif
 
 		#ifdef HF
@@ -585,12 +507,10 @@ class ORdHumanVentricle//:public Cell
 
 		#if defined (CON) || defined(Baseline)|| defined(HF)
 		ICaL=(1.0-fICaLp)*PCa*PhiCaL*d*(f*(1.0-nca)+jca*fca*nca)+fICaLp*PCap*PhiCaL*d*(fp*(1.0-nca)+jca*fcap*nca);//control
-		// ICaL=((1.0-fICaLp)*PCa*PhiCaL*d*(f*(1.0-nca)+jca*fca*nca)+fICaLp*PCap*PhiCaL*d*(fp*(1.0-nca)+jca*fcap*nca))*0.8;//缺血
 		#endif
 
 		#if defined (CORM) || defined (HF_CORM) || defined(CORM_HW) 
-		//ICaL=(1.0-fICaLp)*PCa*PhiCaL*d*(f*(1.0-nca)+jca*fca*nca)+fICaLp*PCap*PhiCaL*d*(fp*(1.0-nca)+jca*fcap*nca);
-		ICaL=((1.0-fICaLp)*PCa*PhiCaL*d*(f*(1.0-nca)+jca*fca*nca)+fICaLp*PCap*PhiCaL*d*(fp*(1.0-nca)+jca*fcap*nca))*0.47;//CORM-2
+		ICaL=((1.0-fICaLp)*PCa*PhiCaL*d*(f*(1.0-nca)+jca*fca*nca)+fICaLp*PCap*PhiCaL*d*(fp*(1.0-nca)+jca*fcap*nca))*0.47;
 		#endif
 
 		#ifdef CORM_Ran
@@ -622,22 +542,19 @@ class ORdHumanVentricle//:public Cell
 
 
 		#if defined (CON) || defined(Baseline)
-		IKr=GKr*sqrt(ko/5.4)*xr*rkr*(v-EK);//control && oh
+		IKr=GKr*sqrt(ko/5.4)*xr*rkr*(v-EK);
 		#endif
 
 		#ifdef CORM
-		//IKr=GKr*sqrt(ko/5.4)*xr*rkr*(v-EK);
-		IKr=GKr*sqrt(ko/5.4)*xr*rkr*(v-EK)*0.56;//CORM-2
+		IKr=GKr*sqrt(ko/5.4)*xr*rkr*(v-EK)*0.56;
 		#endif
 
 		#ifdef CORM_Ran
-		//IKr=GKr*sqrt(ko/5.4)*xr*rkr*(v-EK);
-		IKr=GKr*sqrt(ko/5.4)*xr*rkr*(v-EK)*0.56*Rnakr;//CORM-2_Ran
+		IKr=GKr*sqrt(ko/5.4)*xr*rkr*(v-EK)*0.56*Rnakr;
 		#endif
 
 		#ifdef CORM_HW
-		//IKr=GKr*sqrt(ko/5.4)*xr*rkr*(v-EK);
-		IKr=GKr*sqrt(ko/5.4)*xr*rkr*(v-EK)*0.56*HWKr;//CORM-2_Ran
+		IKr=GKr*sqrt(ko/5.4)*xr*rkr*(v-EK)*0.56*HWKr;
 		#endif
 
 
@@ -705,12 +622,11 @@ class ORdHumanVentricle//:public Cell
 		}
 
 		#if defined (CON) || defined(Baseline)
-		IK1=GK1*sqrt(ko)*rk1*xk1*(v-EK);//control && oh
+		IK1=GK1*sqrt(ko)*rk1*xk1*(v-EK);
 		#endif
 
 		#if defined (CORM) || defined(CORM_Ran) || defined(CORM_HW)
-		//IK1=GK1*sqrt(ko)*rk1*xk1*(v-EK);
-		IK1=GK1*sqrt(ko)*rk1*xk1*(v-EK)*0.34;//CORM-2
+		IK1=GK1*sqrt(ko)*rk1*xk1*(v-EK)*0.66;
 		#endif
 
 		#ifdef HF
@@ -730,25 +646,6 @@ class ORdHumanVentricle//:public Cell
 		if(celltype==2)
 			IK1=GK1*sqrt(ko)*rk1*xk1*(v-EK)*(1-0.527)*0.66;
 		#endif
-
-
-		/*double IKATP;
-		double KMg, fM, KNa, fN, fT, Km, H1, fATP;
-
-		KMg = (0.65 / pow((ko + 5), 0.5))*exp(-2 * 0.32/RTONF*v);
-		fM = 1 / (1 + (3.1 / KMg));
-
-		KNa = 25.9*exp(-0.35/RTONF*v);
-		fN = 1 / (1 + pow((8 / KNa), 2));
-
-		fT = pow(1.3, (T - 309.15) / 10);
-
-		Km = 35.8 + 17.9*pow(ADP, 0.256);
-		H1 = 1.3 + 0.74*exp(-0.09*ADP);
-		fATP = 1 / (1 + pow((1000 * ATP / Km), H1));
-
-		IKATP = 3.495*pow(ko / 5.4, 0.24)*0.91*fM*fN*fT*fATP*(v - EK)*17;
-		*/
 
 			double kna1=15.0;
 			double kna2=5.0;
