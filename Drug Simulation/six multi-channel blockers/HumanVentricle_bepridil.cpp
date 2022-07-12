@@ -186,7 +186,7 @@ class ORdHumanVentricle//:public Cell
 		cai = 1.0e-4;
 		cass = cai;
 		cansr = 1.2;
-//		cansr = 1.2*(1-0.423);//HF
+//		cansr = 1.2*(1-0.423);
 		cajsr = cansr;
 
 		// ORd
@@ -312,12 +312,12 @@ class ORdHumanVentricle//:public Cell
 		INa = GNa*sm*sm*sm*sh*sj*(v-ENa);
 		#endif
 
-	    #ifdef CON
+	        #ifdef CON
 		INa = GNa*sm*sm*sm*sh*sj*(v-ENa);
 		#endif
 
 		#ifdef CORM
-		INa = GNa*sm*sm*sm*sh*sj*(v-ENa)*0.47;//
+		INa = GNa*sm*sm*sm*sh*sj*(v-ENa)*0.47;
 		#endif
 
 		#ifdef HF
