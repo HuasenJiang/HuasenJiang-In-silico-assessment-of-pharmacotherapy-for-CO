@@ -308,7 +308,6 @@ class ORdHumanVentricle//:public Cell
 		sh = H_INF-(H_INF-sh)*exp(-dt/TAU_H);
 		sj = J_INF-(J_INF-sj)*exp(-dt/TAU_J);
 		double GNa = 14.838;
-		//double GNa = 14.838*0.8;//缺血
 
 		#ifdef Baseline
 		INa = GNa*sm*sm*sm*sh*sj*(v-ENa);
