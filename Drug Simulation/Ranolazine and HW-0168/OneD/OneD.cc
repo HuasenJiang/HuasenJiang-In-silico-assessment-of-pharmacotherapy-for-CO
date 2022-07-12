@@ -1,17 +1,3 @@
-/*
- * General Code Structure (GCS) for one-dimensional simulation
- * 
- * A. Code sructure is re-organised using standard C++ to fit into my project.
- * B. The friendly style makes the project easier understood.
- * C. The version is more extendable whatever to further 1D,2D or another single cell model. 
- * 
- * Under Intellectual Property Protection.
- * 
- * 
- * Author      : Shugang Zhang <zhangshugang@hotmail.com>
- * Last update : 06-10-2018
- */
-
 // #include "SingleCell/NeonatalRatAtria.cc"
 // #include "SingleCell/RatSAN.cc"
 //#include "SingleCell/HumanVentricle_healthy.cpp"
